@@ -4,7 +4,11 @@ graphify-out/
 test-results/
 playwright-report/
 blob-report/
-# Managed by the impeccable CLI.
+# Written by their own installers; re-running them rewrites these files.
 .impeccable/
+.claude/skills/
+.claude/hooks/
+.mcp.json
+skills-lock.json
 # Dated research snapshots with verbatim quotes and code fragments.
 docs/research/
