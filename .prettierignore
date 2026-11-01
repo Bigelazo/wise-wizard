@@ -1,0 +1,10 @@
+bun.lock
+src/generated/
+graphify-out/
+test-results/
+playwright-report/
+blob-report/
+# Managed by the impeccable CLI.
+.impeccable/
+# Dated research snapshots with verbatim quotes and code fragments.
+docs/research/
