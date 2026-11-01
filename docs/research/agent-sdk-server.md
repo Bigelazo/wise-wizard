@@ -147,7 +147,7 @@ for await (const message of query({
 **Documentado:**
 
 1. **`/usage` enviado como prompt al SDK → `SDKAssistantMessage.usage_report`** (tipo `SDKUsageReport`, marcado como experimental). `rate_limits.limits[]` trae filas con `kind` ("such as `session`, `weekly_all`, or `weekly_scoped`"), `percent` ("Share of the window used, 0-100"), `resets_at` (ISO 8601), `severity` e `is_active` — https://code.claude.com/docs/en/agent-sdk/typescript#sdkusagereport. **Requisitos:** "The session authenticates with a claude.ai credential", "The credential shows a known plan type or carries the `user:profile` scope", "The account isn't on usage-based billing". Y textualmente: "**A `claude setup-token` token passed as `CLAUDE_CODE_OAUTH_TOKEN` doesn't qualify by default, because it carries only the `user:inference` scope.**" `rate_limits` "is `null` when Claude Code couldn't get the plan's usage, for example when the session's OAuth token lacks the `user:profile` scope." Requiere Agent SDK v0.3.273 o posterior.
-2. **`rate_limit_event` en el stream** (ver arriba): trae `utilization` y `resetsAt`, y `rateLimitType` en los tipos. La página dice "Emitted when the session encounters a rate limit". **No está documentado** con qué frecuencia se emite con `status: "allowed"`, ni si se emite con un token de `setup-token`. No se verificó en ejecución, porque eso habría exigido usar credenciales.
+2. **`rate_limit_event` en el stream** (ver arriba): trae `utilization` y `resetsAt`, y `rateLimitType` en los tipos. La página dice "Emitted when the session encounters a rate limit". **No está documentado** con qué frecuencia se emite con `status: "allowed"`, ni si se emite con un token de `setup-token`. Verificado en ejecución en #15 (sección 7): se emite con `setup-token`, una vez por sesión, y el porcentaje viene en un campo no tipado (`unifiedWindows`).
 3. **JSON de entrada del statusline**: `rate_limits.five_hour.used_percentage`, `rate_limits.seven_day.used_percentage` y `resets_at` en epoch. "appears only for claude.ai Pro, Max, and Ultra subscribers … Even then, it appears only after the first API response in the session." — https://code.claude.com/docs/en/statusline. El statusline está documentado para la interfaz interactiva. **No está documentado** que se ejecute en sesiones del SDK o de `-p`.
 4. **Cabeceras `anthropic-ratelimit-unified-*`**: la guía de gateways dice que "Claude Code reads them on successful responses to show usage against plan limits to developers signed in with claude.ai, and on a `429` to tell a plan limit or spend cap from a temporary throttle" — https://code.claude.com/docs/en/llm-gateway-protocol#response-headers. Se documenta la existencia de la familia de cabeceras, no sus nombres ni su formato. Están en las respuestas que recibe el subproceso `claude`. El SDK no las expone, salvo a través de `rate_limit_event`.
 5. Fuera de programa: claude.ai, en Settings > Usage, muestra "Current session" y el próximo reset semanal — https://support.claude.com/en/articles/11647753
@@ -157,19 +157,65 @@ for await (const message of query({
 - El binario local de Claude Code (v2.1.316) contiene la cadena `api/oauth/usage` y cabeceras como `anthropic-ratelimit-unified-5h-utilization`, `-5h-reset`, `-7d-utilization` y `-7d-reset`. Se vio con `strings` sobre el binario y no se ejecutó nada. **Ninguna página oficial documenta el endpoint `api/oauth/usage`** (se buscó en `llms-full.txt` de code.claude.com sin resultados).
 - Riesgo con los términos: para llamar a ese endpoint desde código propio habría que sacar el token OAuth de la suscripción y usarlo fuera del binario de Claude Code. Eso choca con "developers may not collect, store, or intermediate Claude.ai credentials or session tokens" (https://code.claude.com/docs/en/legal-and-compliance) y con la prohibición de "third-party tools that misrepresent their identity to Anthropic's servers" (https://support.claude.com/en/articles/13189465-log-in-to-your-claude-account, citado en #3). Además, el token de `setup-token` no tiene `user:profile`. Que ese endpoint lo exija **no está documentado**, pero el SDK documenta esa misma condición para `usage_report`.
 
+## 7. Verificación en vivo con el token de `setup-token` (#15)
+
+Spike desechable (fuera del repo), ejecutado el 2026-10-31 con `@anthropic-ai/claude-agent-sdk@0.3.316`, Node v26.10.0 y `claude-haiku-5-5`, autenticado solo con `CLAUDE_CODE_OAUTH_TOKEN` de `claude setup-token` (el script abortaba si había `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN` o `apiKeyHelper`; el mensaje `init` reportó `"apiKeySource":"none"`). Opciones: `tools: []` (salvo `Read` en el experimento E), `settingSources: []`, `strictMcpConfig: true`, `permissionMode: "dontAsk"`, `persistSession: false`, sin `--bare`, entrada por streaming. La página de prueba fue una página de texto corrido de un libro de texto (un PDF de una página, 42.4 KB). Los extractos son del log de la ejecución, recortados.
+
+Experimentos: A = tres turnos de una palabra en una misma sesión, con 5 llamadas a `getContextUsage({ detail: 'full' })` entre el primero y el segundo; B = herramienta MCP propia que devuelve la página como `resource` con `blob`; C = pregunta sin PDF (línea base); D = misma pregunta con la página como bloque `document` en el mensaje de usuario; E = la herramienta `Read` sobre la página en un directorio vacío.
+
+### `rate_limit_event`
+
+- **Se emite con un token de `setup-token`**, con `status: "allowed"`, **una sola vez por sesión, junto a la primera respuesta**. Los turnos siguientes de la misma sesión no traen ninguno. Esto coincide con el comentario del tipo en `sdk.d.ts`: "Rate limit event emitted when rate limit info changes."
+  ```
+  rateLimitEventsPerTurn: A#1 1 · A#2 0 · A#3 0 · B#1 1 · C#1 1 · D#1 1 · E#1 1
+  ```
+- **`utilization` no viene en el nivel superior** de `rate_limit_info`. El porcentaje de las dos ventanas llega en `unifiedWindows`, un campo que **no está en los tipos de la 0.3.316** ni en la documentación:
+  ```json
+  {"status":"allowed","resetsAt":1793508000,"rateLimitType":"five_hour",
+   "overageStatus":"rejected","overageDisabledReason":"org_level_disabled","isUsingOverage":false,
+   "unifiedWindows":{"five_hour":{"utilization":0.4,"resetsAt":1793508000,"status":"allowed"},
+                     "seven_day":{"utilization":0.12,"resetsAt":1793944800,"status":"allowed"}}}
+  ```
+  `utilization` parece una fracción de 0 a 1 con dos decimales (0.39 en una corrida anterior, 0.4 en esta). `resetsAt` está en segundos epoch. `rateLimitType` es `"five_hour"` y el `resetsAt` de nivel superior es el de esa ventana. `overageStatus: "rejected"` con `"org_level_disabled"` concuerda con tener el extra usage desactivado.
+
+### `getContextUsage()` y el cupo
+
+- **No se pudo medir.** Para comparar `utilization` antes y después hace falta un `rate_limit_event` posterior a las llamadas, y en la misma sesión no llegó ninguno (A#2 y A#3: 0 eventos). Además, la resolución observada es de 0.01 de la ventana de 5 horas, muy gruesa para el costo de un conteo de tokens.
+- La otra vía de lectura del cupo, `usage_EXPERIMENTAL_MAY_CHANGE_DO_NOT_RELY_ON_THIS_API_YET({ skipBehaviors: true })` (método del `Query` en los tipos), tampoco sirve con este token:
+  ```
+  "subscription_type":null,"rate_limits_available":false,"rate_limits":null
+  ```
+- Lo observado: `full` y `summary` devolvieron el mismo `totalTokens` (605) en esa sesión, y ningún request apareció en el stream ni en `model_usage`.
+
+### Sub-PDF desde una herramienta propia
+
+- **Un `resource` con `blob` `application/pdf` no llega a Claude como documento.** El SDK guarda el binario en disco (bajo `~/.claude/projects/…/tool-results/`, aun con `persistSession: false`) y le pasa al modelo solo una línea de texto:
+  ```
+  [Resource from book at wisewizard://section/1.pdf] Binary content (application/pdf, 42.4KB) saved to …/tool-results/mcp-book-blob-….pdf
+  ```
+  El modelo respondió `NO_PDF`, y la entrada creció solo 260 tokens tras el resultado de la herramienta (1148 → 1408).
+- **Vías que sí funcionan**, ambas con la cita textual correcta de la primera oración ("There are two general approaches to fighting complexity, …"):
+  - **Bloque `document` en el mensaje de usuario** (D): `{ type: "document", source: { type: "base64", media_type: "application/pdf", data } }` dentro de `message.content` del `SDKUserMessage`.
+  - **`Read`** (E): el resultado lleva un bloque `text` ("PDF file read: …/section.pdf (42.4KB)") seguido de un bloque `document`. Exige habilitar `Read` y tener el archivo en disco.
+- La página usada no tenía número impreso y el modelo lo dijo ("No page number is printed on this page") en vez de inventarlo. La lectura de la Página impresa queda probada solo en una corrida previa con otro documento de una página, que no se cita aquí por contener datos personales.
+
+### Tokens por página
+
+- **2,253 tokens** para la página del libro como bloque `document`: entrada total de D (2,917) menos la de la línea base C (664), contando `input_tokens + cache_creation_input_tokens + cache_read_input_tokens`. Cae dentro del rango documentado de 1,500–3,000 por página.
+- Con `Read`, la entrada creció 2,442 tokens tras el resultado de la herramienta (1,772 → 4,214), lo que incluye el bloque de texto y el turno de la llamada.
+- Es una sola página de un solo libro: la densidad varía según el contenido.
+
 ## Implicancias para Wise Wizard
 
 - Con `CLAUDE_CODE_OAUTH_TOKEN` de `setup-token`, el SDK hace llamadas al modelo con la suscripción Pro, siempre que no se use `--bare` y que no haya `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN` ni `apiKeyHelper` en el entorno del subproceso. El token dura un año y no se renueva solo. Al vencer, las llamadas fallan con 401 hasta que alguien genere otro token en un navegador.
 - Las operaciones del dominio se pueden exponer como herramientas en el mismo proceso con `createSdkMcpServer`. Con `tools: []`, Claude no ve ninguna herramienta incorporada: ni WebSearch, ni WebFetch, ni Bash, ni Write. `settingSources: []` y `strictMcpConfig: true` dejan fuera la configuración de `~/.claude` y los conectores de claude.ai.
 - El SDK no incluye el streaming al navegador. Entrega deltas `text_delta` que la app tiene que reenviar por HTTP o WebSocket. Las sesiones se retoman por ID desde transcripts JSONL locales. Para que sobrevivan a un reinicio del contenedor hace falta un `SessionStore` o un volumen persistente. Cada sesión concurrente es un subproceso, con alrededor de 1 GiB de RAM como base.
 - Los modelos actuales tienen 1M tokens de contexto en Pro. El tope de 300k no existe como opción del SDK. La app lo puede imponer leyendo `usage` o `getContextUsage()`, y `CLAUDE_CODE_AUTO_COMPACT_WINDOW=300000` mueve la compactación a ese umbral. `DISABLE_AUTO_COMPACT` y `DISABLE_COMPACT` existen.
-- Un sub-PDF puede llegar como bloque `document` en el mensaje de usuario (sin ejemplo oficial con PDF), o con la herramienta `Read`, que exige habilitar `Read` y tener el archivo en disco. Las imágenes pueden llegar en el mensaje o como resultado de una herramienta propia. Una página de PDF cuesta entre 1,500 y 3,000 tokens de texto, más su costo como imagen, de hasta 4,784 tokens visuales.
+- Un sub-PDF llega como documento por dos vías verificadas: un bloque `document` en el mensaje de usuario, o la herramienta `Read`, que exige habilitar `Read` y tener el archivo en disco. **Una herramienta propia no puede entregar un PDF**: el `resource` con `blob` se guarda en disco y el modelo solo ve la ruta. Las herramientas propias sirven para entregar texto (por ejemplo, texto marcado con su Página impresa) e imágenes. Una página de libro de texto costó 2,253 tokens como `document`.
 - Pro incluye Opus, Sonnet y Haiku. Fable solo con usage credits. El peso de cada modelo en el cupo no está publicado. Al agotar el cupo con extra usage desactivado, la petición se rechaza con error `rate_limit` (429), `rate_limit_event` con `status: "rejected"` y el mensaje "You've hit your session/weekly limit · resets …".
-- Para el footer: la única vía documentada con porcentaje y reset de 5 h y semanal es `usage_report` (enviar `/usage` al SDK). Según la documentación, esa vía **no funciona con un token de `setup-token`**, porque le falta el scope `user:profile`. Con una credencial de `/login` sí funcionaría, pero esa credencial expira y necesita refrescarse. `rate_limit_event` trae `utilization` y `resetsAt`, pero no está documentado si llega en cada respuesta ni si llega con `setup-token`. El endpoint `api/oauth/usage` no está documentado, y usarlo desde código propio choca con los términos.
+- Para el footer: la única vía documentada con porcentaje y reset de 5 h y semanal es `usage_report` (enviar `/usage` al SDK). Según la documentación, esa vía **no funciona con un token de `setup-token`**, porque le falta el scope `user:profile`. Con una credencial de `/login` sí funcionaría, pero esa credencial expira y necesita refrescarse. En cambio, `rate_limit_event` **sí llega con `setup-token`** y trae la utilización y el reset de 5 h y semanal en `unifiedWindows`, pero solo una vez por sesión (en la primera respuesta) y en un campo que no está en los tipos, que puede cambiar sin aviso. El footer puede tomar el valor de la sesión más reciente; dentro de una sesión larga queda desactualizado. El endpoint `api/oauth/usage` no está documentado, y usarlo desde código propio choca con los términos.
 
 ## Sin verificar
 
-- Si `rate_limit_event` se emite en cada respuesta (con `status: "allowed"`) y si se emite con un token de `setup-token`. Para comprobarlo hay que ejecutar el SDK con credenciales reales.
-- Si los token-counting requests de `getContextUsage()` en modo `full` consumen cupo de la suscripción.
-- Si un bloque `resource` con `blob` PDF devuelto por una herramienta llega a Claude como `document`.
+- Si los token-counting requests de `getContextUsage()` en modo `full` consumen cupo de la suscripción. **No verificable con un token de `setup-token`** (sección 7): `rate_limit_event` no vuelve a llegar dentro de la sesión, `usage_EXPERIMENTAL…` devuelve `rate_limits: null` y la resolución de `utilization` es de 0.01 de la ventana de 5 horas.
 - Cuánto dura un login de `/login`.
