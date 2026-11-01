@@ -49,8 +49,12 @@ Los datos bibliográficos de una Fuente en formato APA 7 (autores, año, título
 _Evitar_: Metadatos, bibliografía
 
 **Cita** (`Citation`):
-La mención de una Referencia, con su Página impresa, que respalda una afirmación concreta de la IA. Puede ser una Cita textual o una Paráfrasis.
+La mención de una Referencia, con su Página impresa, que respalda una afirmación concreta de la IA. Puede ser una Cita textual o una Paráfrasis. Toda Cita de un PDF lleva su Pasaje.
 _Evitar_: Referencia (la Referencia describe la Fuente; la Cita respalda una afirmación)
+
+**Pasaje** (`Passage`):
+El texto literal de una Fuente, dentro de una sola Página impresa, que respalda una Cita y que se resalta al abrirla. En una Cita textual es el texto citado; en una Paráfrasis, el texto que se reformula.
+_Evitar_: Ancla, fragmento, extracto
 
 **Cita textual** (`Quotation`):
 Una Cita que reproduce literalmente el texto de la Fuente, en su idioma original.
