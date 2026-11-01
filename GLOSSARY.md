@@ -101,3 +101,9 @@ _Evitar_: Error, falla, debilidad
 **Evaluación** (`Assessment`):
 El juicio de la IA sobre una respuesta escrita del estudiante, en un Repaso o en un Control de lectura. Incluye retroalimentación y, en un Repaso, una Calificación propuesta que el estudiante confirma o cambia.
 _Evitar_: Nota, corrección
+
+### Uso de la IA
+
+**Cupo** (`Quota`):
+El límite de uso de la suscripción Pro, en dos ventanas (5 horas y semanal), compartido entre la IA de la app y el uso de Claude Code del desarrollador.
+_Evitar_: Límite, rate limit, tokens restantes
