@@ -16,6 +16,10 @@ _Evitar_: Colección, repositorio
 Un material de referencia (libro, paper, imagen) incorporado una sola vez a la Biblioteca, con sus datos bibliográficos.
 _Evitar_: Documento, archivo, material
 
+**Estado de la Fuente** (`SourceStatus`):
+La etapa en que está una Fuente dentro de la Biblioteca: _Procesando_, _Por revisar_ (el estudiante escribe su Referencia y revisa su Índice), _Lista_ (se puede usar en un Cuaderno) o _Eliminada_ (sin su documento, pero con sus Cartas y Citas).
+_Evitar_: Estado de carga, status
+
 **Índice** (`Outline`):
 El árbol de Secciones de una Fuente.
 _Evitar_: Tabla de contenidos, TOC, marcadores
@@ -45,7 +49,7 @@ La Página impresa en la que el estudiante declara ir dentro de una Fuente. Las 
 _Evitar_: Avance, porcentaje leído
 
 **Referencia** (`Reference`):
-Los datos bibliográficos de una Fuente en formato APA 7 (autores, año, título, edición, editorial o revista, DOI), confirmados por el estudiante.
+Los datos bibliográficos de una Fuente en formato APA 7 (autores, año, título, edición, editorial o revista, DOI), escritos por el estudiante.
 _Evitar_: Metadatos, bibliografía
 
 **Cita** (`Citation`):
