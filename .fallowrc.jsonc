@@ -1,6 +1,5 @@
 {
   "$schema": "./node_modules/fallow/schema.json",
-  "ignorePatterns": ["src/generated/**"],
   // Installed by the bootstrap (issue #18) before any code imports them.
   // The first change that imports one of these removes it from this list.
   "ignoreDependencies": [
