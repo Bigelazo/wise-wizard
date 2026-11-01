@@ -1,0 +1,10 @@
+// Models are pending the deep-modules grilling (issue #11).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
