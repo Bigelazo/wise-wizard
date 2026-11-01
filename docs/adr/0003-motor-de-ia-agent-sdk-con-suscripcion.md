@@ -8,7 +8,7 @@ La IA corre dentro de Wise Wizard con el Claude Agent SDK, autenticado con un to
 - **Cupo compartido.** La IA de la app y el uso de Claude Code como desarrollador consumen el mismo cupo (5 horas y semanal). Por eso la ingesta es determinista siempre que se pueda y la IA lee de a una Sección.
 - **El footer de la app muestra el cupo restante**, de 5 horas y semanal, con la hora de reinicio de cada ventana. Sale del último `rate_limit_event` que recibió el motor, que llega una vez por sesión, en la primera respuesta. Se muestra con su antigüedad porque no es un valor en vivo: la app no ve lo que consume Claude Code. Si una petición se rechaza por cupo, el footer indica qué ventana se agotó y cuándo se reinicia. Los porcentajes vienen en `unifiedWindows`, un campo sin tipos ni documentación. Si falta o cambia de forma, se conserva la última lectura válida, o "sin datos", y la app deja un warning en el log. La lectura vive en memoria. Se descartaron `usage_report` (no funciona con `setup-token`, y con `/login` la credencial expira y reabre la pregunta de los términos), las sesiones de refresco (gastan cupo) y `api/oauth/usage` (choca con los términos).
 - **Multiusuario exige migrar a API key** (ver ADR-0010).
-- **Sin las Citations nativas de la Messages API.** Las Citas se construyen con herramientas propias que entregan el texto marcado con su Página impresa.
+- **Sin las Citations nativas de la Messages API.** Las Citas las emite un subagente con la herramienta propia `cite`, y la app las valida contra el texto de la Página impresa (ADR-0021).
 - **El "extra usage" de la cuenta queda desactivado**, para que en el peor caso las peticiones se rechacen en vez de cobrarse.
 
 ## Opciones consideradas
