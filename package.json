@@ -13,7 +13,8 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "check": "bun run lint && bun run typecheck && bun run format:check && bun run test && fallow && react-doctor --no-telemetry --no-supply-chain --blocking warning && IMPECCABLE_NO_TELEMETRY=1 impeccable detect src"
+    "check": "bun run lint && bun run typecheck && bun run format:check && bun run test && fallow && react-doctor --no-telemetry --no-supply-chain --blocking warning && IMPECCABLE_NO_TELEMETRY=1 impeccable detect src",
+    "setup": "graphify hook install && claude plugin install ponytail@ponytail --scope project && claude plugin install impeccable@impeccable --scope project && claude plugin install mattpocock-skills@claude-plugins-official --scope project"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "0.3.316",
