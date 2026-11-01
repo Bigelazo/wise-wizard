@@ -107,3 +107,7 @@ _Evitar_: Nota, corrección
 **Cupo** (`Quota`):
 El límite de uso de la suscripción Pro, en dos ventanas (5 horas y semanal), compartido entre la IA de la app y el uso de Claude Code del desarrollador.
 _Evitar_: Límite, rate limit, tokens restantes
+
+**Compactación** (`compaction`):
+El resumen que la IA hace de una Consulta larga para seguir en el mismo hilo sin pasar el tope de contexto. La IA avisa al estudiante cuándo ocurrió y qué información conserva.
+_Evitar_: Resumen (sin calificar), reinicio
