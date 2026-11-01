@@ -14,7 +14,8 @@ export async function GET() {
   try {
     await prisma.$queryRaw`SELECT 1`;
     return Response.json({ status: "ok", db: "up" });
-  } catch {
+  } catch (error) {
+    console.error(error);
     return Response.json({ status: "error", db: "down" }, { status: 503 });
   }
 }
