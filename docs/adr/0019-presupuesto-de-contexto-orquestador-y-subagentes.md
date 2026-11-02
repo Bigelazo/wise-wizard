@@ -1,6 +1,6 @@
 # Presupuesto de contexto: orquestador y subagentes con un tope de 300k
 
-Ningún contexto de la IA supera los 300k tokens. El tope es un límite de calidad: lejos de él, el modelo no se degrada (la "dumb zone"). No es un límite de capacidad, porque en Pro los modelos traen 1M, y el SDK no lo ofrece como opción, así que lo impone la app. Para que una Consulta pueda ser larga sin dejar de leer las Fuentes completas, la IA se divide en dos roles. El **orquestador** dialoga con el estudiante y nunca carga PDFs. Los **subagentes** nativos del SDK leen los sub-PDFs completos con `Read`, incluidas fórmulas, tablas y figuras, y le devuelven al orquestador un informe con sus Citas.
+Ningún contexto de la IA supera los 300k tokens. El tope es un límite de calidad: lejos de él, el modelo no se degrada (la "dumb zone"). No es un límite de capacidad, porque en Pro los modelos traen 1M, y el SDK no lo ofrece como opción, así que lo impone la app. Para que una Consulta pueda ser larga sin dejar de leer las Fuentes completas, la IA se divide en dos roles. El **orquestador** dialoga con el estudiante y nunca carga PDFs. Los **subagentes** nativos del SDK leen con `Read` las Secciones completas, parte por parte (ADR-0025), incluidas fórmulas, tablas y figuras, y le devuelven al orquestador un informe con sus Citas.
 
 ## Consecuencias
 
@@ -17,7 +17,7 @@ Ningún contexto de la IA supera los 300k tokens. El tope es un límite de calid
   | Cartas de un capítulo               | Un subagente por sub-Sección, con sus Fuentes secundarias y las preguntas de las Cartas ya propuestas, para evitar repetidas | Más subagentes: por sub-Sección y, si una hoja del Índice no cabe, por rango de páginas |
   | Control de lectura                  | Un subagente lee la Sección y prepara las preguntas con sus Citas                                                            | Igual que en Cartas                                                                     |
   | Evaluación                          | La Carta y la página de su Cita de origen, con una página antes y otra después (~7k tokens)                                  | No aplica                                                                               |
-  | Asociación de una Fuente secundaria | La secundaria y el Índice de la principal, sin sus PDFs                                                                      | Lo decide la ingesta (#17)                                                              |
+  | Asociación de una Fuente secundaria | La secundaria (su texto con `page_text`, o la imagen con `Read`) y el Índice de la principal, sin sus PDFs                   | `page_text` corta en el tope y se asocia con lo leído (ADR-0025)                        |
 
 - **Sin verificar en vivo, pero respaldado por los tipos del SDK 0.3.316:** que un hook `PreToolUse` niegue un `Read` hecho dentro de un subagente, y que los subagentes nativos corran dentro del subproceso del orquestador en vez de abrir uno propio (~1 GiB cada uno). Se comprueba en el primer spike de implementación.
 
